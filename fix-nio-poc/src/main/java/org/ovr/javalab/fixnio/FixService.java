@@ -1,5 +1,7 @@
 package org.ovr.javalab.fixnio;
 
+import net.openhft.chronicle.bytes.Bytes;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -57,8 +59,8 @@ public class FixService implements Closeable {
             throws IOException {
         final FixNetworkContext context = (FixNetworkContext) key.attachment();
         final SocketChannel client = (SocketChannel) key.channel();
-        final ByteBuffer buffer = context.readBuffer;
-        client.read(buffer);
+        final Bytes buffer = context.readBuffer;
+        client.read((ByteBuffer) buffer.underlyingObject());
         consumer.accept(context);
         //buffer.flip();
         //System.out.println(new String(buffer.array()).trim());

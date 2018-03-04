@@ -22,6 +22,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>net.openhft</groupId>
+            <artifactId>chronicle-bytes</artifactId>
+            <version>1.11.0</version>
+        </dependency>
+        <dependency>
             <groupId>com.lmax</groupId>
             <artifactId>nanofix</artifactId>
             <version>1.0.0</version>

@@ -41,7 +41,7 @@ public class FixServiceTest {
         final CountDownLatch msgReceived = new CountDownLatch(1);
 
         final Consumer<FixNetworkContext> handler = (context) -> {
-            System.out.println(new String(context.readBuffer.array()).trim());
+            System.out.println(context.readBuffer.toDebugString());
             msgReceived.countDown();
         };
 

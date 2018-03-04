@@ -1,12 +1,16 @@
 package org.ovr.javalab.fixnio;
 
+import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.BytesStore;
+import net.openhft.chronicle.bytes.NativeBytes;
+
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
 public class FixNetworkContext {
     final SocketChannel channel;
-    final ByteBuffer readBuffer = ByteBuffer.allocate(256);
-    final ByteBuffer writeBuffer = ByteBuffer.allocate(256);
+    final Bytes readBuffer = Bytes.elasticByteBuffer();
+    final Bytes writeBuffer = Bytes.elasticByteBuffer();
 
     FixNetworkContext(SocketChannel channel) {
         this.channel = channel;
@@ -16,11 +20,11 @@ public class FixNetworkContext {
         return channel;
     }
 
-    public ByteBuffer getReadBuffer() {
+    public Bytes getReadBuffer() {
         return readBuffer;
     }
 
-    public ByteBuffer getWriteBuffer() {
+    public Bytes getWriteBuffer() {
         return writeBuffer;
     }
 }
