@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -36,7 +37,7 @@ public class FixServiceTest {
     }
 
     @Test
-    void testAcceptor() throws InterruptedException {
+    void testAcceptorConnectAndLogon() throws InterruptedException {
         final CountDownLatch msgReceived = new CountDownLatch(1);
 
         final Consumer<FixNetworkContext> handler = (context) -> {
@@ -78,6 +79,7 @@ public class FixServiceTest {
         assertTrue(client.isConnected());
 
         client.send(new FixMessageBuilder().messageType(MsgType.LOGIN).username("hello").build());
-        msgReceived.await();
+        msgReceived.await(100, TimeUnit.MILLISECONDS);
+        assertEquals(0, msgReceived.getCount());
     }
 }
