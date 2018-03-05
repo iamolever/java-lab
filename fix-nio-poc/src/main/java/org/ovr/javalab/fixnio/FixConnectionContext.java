@@ -7,12 +7,12 @@ import net.openhft.chronicle.bytes.NativeBytes;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
-public class FixNetworkContext {
+public class FixConnectionContext {
     final SocketChannel channel;
     final Bytes readBuffer = Bytes.elasticByteBuffer();
     final Bytes writeBuffer = Bytes.elasticByteBuffer();
 
-    FixNetworkContext(SocketChannel channel) {
+    FixConnectionContext(SocketChannel channel) {
         this.channel = channel;
     }
 

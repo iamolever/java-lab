@@ -35,7 +35,7 @@ public class FixService implements Closeable {
         serverSocket.register(selector, SelectionKey.OP_ACCEPT);
     }
 
-    public void doEventLoop(final Consumer<FixNetworkContext> consumer) throws IOException {
+    public void doEventLoop(final Consumer<FixConnectionContext> consumer) throws IOException {
         stopFlag = false;
 
         while (!stopFlag) {
@@ -55,11 +55,11 @@ public class FixService implements Closeable {
         }
     }
 
-    private static void handleReadableEvent(final SelectionKey key, final Consumer<FixNetworkContext> consumer)
+    private static void handleReadableEvent(final SelectionKey key, final Consumer<FixConnectionContext> consumer)
             throws IOException {
-        final FixNetworkContext context = (FixNetworkContext) key.attachment();
-        final SocketChannel client = (SocketChannel) key.channel();
+        final FixConnectionContext context = (FixConnectionContext) key.attachment();
         final Bytes buffer = context.readBuffer;
+        final SocketChannel client = (SocketChannel) key.channel();
         client.read((ByteBuffer) buffer.underlyingObject());
         consumer.accept(context);
         //buffer.flip();
@@ -72,7 +72,7 @@ public class FixService implements Closeable {
         final SocketChannel client = serverSocket.accept();
         client.configureBlocking(false);
         final SelectionKey clientKey = client.register(selector, SelectionKey.OP_READ);
-        final FixNetworkContext context = new FixNetworkContext(client);
+        final FixConnectionContext context = new FixConnectionContext(client);
         clientKey.attach(context);
     }
 

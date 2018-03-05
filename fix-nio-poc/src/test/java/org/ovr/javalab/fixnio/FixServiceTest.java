@@ -8,7 +8,6 @@ import com.lmax.nanofix.incoming.FixMessageHandler;
 import com.lmax.nanofix.outgoing.FixMessageBuilder;
 import com.lmax.nanofix.transport.ConnectionObserver;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -40,7 +39,7 @@ public class FixServiceTest {
     void testAcceptorConnectAndLogon() throws InterruptedException {
         final CountDownLatch msgReceived = new CountDownLatch(1);
 
-        final Consumer<FixNetworkContext> handler = (context) -> {
+        final Consumer<FixConnectionContext> handler = (context) -> {
             System.out.println(context.readBuffer.toDebugString());
             msgReceived.countDown();
         };
