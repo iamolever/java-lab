@@ -1,10 +1,6 @@
 package org.ovr.javalab.fixnio;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.BytesStore;
-import net.openhft.chronicle.bytes.NativeBytes;
-
-import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
 public class FixConnectionContext {
