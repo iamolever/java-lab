@@ -37,11 +37,11 @@ public class FixServiceTest {
 
     @Test
     void testAcceptorConnectAndLogon() throws InterruptedException {
-        final CountDownLatch msgReceived = new CountDownLatch(1);
+        final CountDownLatch msgLeftToReceive = new CountDownLatch(1);
 
         final Consumer<FixConnectionContext> handler = (context) -> {
             System.out.println(context.readBuffer.toDebugString());
-            msgReceived.countDown();
+            msgLeftToReceive.countDown();
         };
 
         fixServiceThread = new Thread(() -> {
@@ -78,7 +78,7 @@ public class FixServiceTest {
         assertTrue(client.isConnected());
 
         client.send(new FixMessageBuilder().messageType(MsgType.LOGIN).username("hello").build());
-        msgReceived.await(100, TimeUnit.MILLISECONDS);
-        assertEquals(0, msgReceived.getCount());
+        msgLeftToReceive.await(100, TimeUnit.MILLISECONDS);
+        assertEquals(0, msgLeftToReceive.getCount());
     }
 }

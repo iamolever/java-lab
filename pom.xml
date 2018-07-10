@@ -17,6 +17,7 @@
     </properties>
 
     <modules>
+        <module>fix-message</module>
         <module>fix-nio-poc</module>
     </modules>
 

@@ -8,11 +8,11 @@
         <version>1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>fix-nio-poc</artifactId>
+    <artifactId>fix-message</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <name>FIX Engine Networking (Java NIO-based PoC)</name>
+    <name>FIX Message Library</name>
     <url>http://maven.apache.org</url>
 
     <properties>
@@ -21,31 +21,15 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.ovr.javalab</groupId>
-            <artifactId>fix-message</artifactId>
-            <version>1.0-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>net.openhft</groupId>
-            <artifactId>chronicle-bytes</artifactId>
-            <version>1.11.0</version>
+            <groupId>com.lmax</groupId>
+            <artifactId>nanofix</artifactId>
+            <version>1.0.0</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
             <version>1.7.25</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-            <version>13.0</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>joda-time</groupId>
-            <artifactId>joda-time</artifactId>
-            <version>2.5</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -72,16 +56,30 @@
             <version>1.1.0</version>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>com.lmax</groupId>
-            <artifactId>nanofix</artifactId>
-            <version>1.0.0</version>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-install-plugin</artifactId>
+                <version>2.5.2</version>
+                <executions>
+                    <execution>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>lib/nanofix-SNAPSHOT.jar</file>
+                            <groupId>com.lmax</groupId>
+                            <artifactId>nanofix</artifactId>
+                            <version>1.0.0</version>
+                            <packaging>jar</packaging>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>

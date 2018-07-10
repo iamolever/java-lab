@@ -62,10 +62,6 @@ public class FixService implements Closeable {
         final SocketChannel client = (SocketChannel) key.channel();
         client.read((ByteBuffer) buffer.underlyingObject());
         consumer.accept(context);
-        //buffer.flip();
-        //System.out.println(new String(buffer.array()).trim());
-        //client.write(buffer);
-        //buffer.clear();
     }
 
     private void handleAcceptableEvent(final SelectionKey key) throws IOException {
