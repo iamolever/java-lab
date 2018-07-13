@@ -65,7 +65,7 @@ public class FixServiceTest {
         client.registerTransportObserver(new ConnectionObserver() {
             @Override
             public void connectionEstablished() {
-                System.out.println("TCP Connection Established.");
+                System.out.println("TCP Connection has been established.");
             }
 
             @Override
@@ -78,7 +78,7 @@ public class FixServiceTest {
         assertTrue(client.isConnected());
 
         client.send(new FixMessageBuilder().messageType(MsgType.LOGIN).username("hello").build());
-        msgLeftToReceive.await(100, TimeUnit.MILLISECONDS);
+        msgLeftToReceive.await(1000, TimeUnit.MILLISECONDS);
         assertEquals(0, msgLeftToReceive.getCount());
     }
 }
