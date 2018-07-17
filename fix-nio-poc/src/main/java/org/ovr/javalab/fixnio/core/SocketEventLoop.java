@@ -1,6 +1,7 @@
-package org.ovr.javalab.fixnio;
+package org.ovr.javalab.fixnio.core;
 
 import net.openhft.chronicle.bytes.Bytes;
+import org.ovr.javalab.fixnio.connection.FixConnectionContext;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -14,14 +15,22 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.function.Consumer;
 
-public class FixService implements Closeable {
+public class SocketEventLoop implements Closeable {
+    private final static boolean DEFAULT_TCP_NODELAY = true;
+
     private final String host;
     private final int port;
     private final Selector selector;
     private final ServerSocketChannel serverSocket;
-    private volatile boolean stopFlag = false;
 
-    public FixService(String host, int port) throws IOException {
+    private Consumer<FixConnectionContext> socketConnectionHandler;
+    private Consumer<FixConnectionContext> socketReadHandler;
+    private Consumer<FixConnectionContext> socketWriteHandler;
+
+    private volatile boolean stopFlag = false;
+    private boolean tcpNoDelay = DEFAULT_TCP_NODELAY;
+
+    public SocketEventLoop(final String host, final int port) throws IOException {
         this.host = host;
         this.port = port;
         selector = Selector.open();
@@ -35,7 +44,19 @@ public class FixService implements Closeable {
         serverSocket.register(selector, SelectionKey.OP_ACCEPT);
     }
 
-    public void doEventLoop(final Consumer<FixConnectionContext> consumer) throws IOException {
+    public void handleSocketConnectionWith(final Consumer<FixConnectionContext> socketConnectionHandler) {
+        this.socketConnectionHandler = socketConnectionHandler;
+    }
+
+    public void handleSocketReadEventWith(final Consumer<FixConnectionContext> socketReadHandler) {
+        this.socketReadHandler = socketReadHandler;
+    }
+
+    public void handleSocketWriteEventWith(final Consumer<FixConnectionContext> socketWriteHandler) {
+        this.socketWriteHandler = socketWriteHandler;
+    }
+
+    public void doEventLoop() throws IOException {
         stopFlag = false;
 
         while (!stopFlag) {
@@ -46,7 +67,9 @@ public class FixService implements Closeable {
                 final SelectionKey key = eventIterator.next();
 
                 if (key.isReadable()) {
-                    handleReadableEvent(key, consumer);
+                    handleReadableEvent(key);
+                } else if (key.isWritable()) {
+                    handleWritableEvent(key);
                 } else if (key.isAcceptable()) {
                     handleAcceptableEvent(key);
                 }
@@ -55,21 +78,32 @@ public class FixService implements Closeable {
         }
     }
 
-    private static void handleReadableEvent(final SelectionKey key, final Consumer<FixConnectionContext> consumer)
-            throws IOException {
+    private void handleReadableEvent(final SelectionKey key) throws IOException {
         final FixConnectionContext context = (FixConnectionContext) key.attachment();
-        final Bytes buffer = context.readBuffer;
+        final Bytes buffer = context.getReadBuffer();
+        final ByteBuffer inBB = context.getInByteBuffer();
         final SocketChannel client = (SocketChannel) key.channel();
-        client.read((ByteBuffer) buffer.underlyingObject());
-        consumer.accept(context);
+        client.read(inBB);
+        buffer.readLimit(inBB.position());
+        this.socketReadHandler.accept(context);
+    }
+
+    private void handleWritableEvent(final SelectionKey key) throws IOException {
+        final FixConnectionContext context = (FixConnectionContext) key.attachment();
+        final SocketChannel client = (SocketChannel) key.channel();
+        //final ByteBuffer inBB = context.getInByteBuffer();
+        //client.read(inBB);
+        this.socketWriteHandler.accept(context);
     }
 
     private void handleAcceptableEvent(final SelectionKey key) throws IOException {
         final SocketChannel client = serverSocket.accept();
+        client.socket().setTcpNoDelay(tcpNoDelay);
         client.configureBlocking(false);
         final SelectionKey clientKey = client.register(selector, SelectionKey.OP_READ);
         final FixConnectionContext context = new FixConnectionContext(client);
         clientKey.attach(context);
+        this.socketConnectionHandler.accept(context);
     }
 
     public void shutdown() {

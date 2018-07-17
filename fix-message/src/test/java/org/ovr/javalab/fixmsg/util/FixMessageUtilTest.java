@@ -19,7 +19,7 @@ public class FixMessageUtilTest {
             .targetCompID("target1")
             .msgSeqNum(1)
             .sendingTime(DateTime.now())
-            .username("hello")
+            .username("hello1")
             .build().toFixString();
     private final static Bytes logonBytes = Bytes.from(logonMsg);
     private final static Bytes compIdReadBuffer = Bytes.elasticByteBuffer();

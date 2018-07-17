@@ -1,4 +1,4 @@
-package org.ovr.javalab.stream;
+package org.ovr.javalab.fixnio.stream;
 
 import net.openhft.chronicle.bytes.Bytes;
 

@@ -1,15 +1,16 @@
-package org.ovr.javalab.stream;
+package org.ovr.javalab.fixnio.stream;
 
 import net.openhft.chronicle.bytes.Bytes;
-import org.ovr.javalab.fixmsg.FixMessage;
+import org.ovr.javalab.fixmsg.FixMessageHeader;
 import org.ovr.javalab.fixmsg.util.ByteUtil;
 import org.ovr.javalab.fixmsg.util.FixMessageUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+import static org.ovr.javalab.fixnio.stream.FixInStreamCallback.StreamBehavior.BREAK;
+
+@Deprecated
 public class StatefulFixInStream implements FixInputStream {
     private final static int DEFAULT_COMPACT_THRESHOLD = 32678;
-    private final Logger logger = LoggerFactory.getLogger(StatefulFixInStream.class);
+    //private final Logger logger = LoggerFactory.getLogger(StatefulFixInStream.class);
 
     private final Bytes buffer;
     private int compactThreshold = DEFAULT_COMPACT_THRESHOLD;
@@ -21,6 +22,7 @@ public class StatefulFixInStream implements FixInputStream {
 
     private long offset = 0;
     private StreamState streamState = StreamState.INIT;
+    private FixInStreamCallback.StreamBehavior streamBehavior = FixInStreamCallback.StreamBehavior.CONTINUE;
 
     public StatefulFixInStream(final Bytes buffer, final FixInStreamCallback callback, final int compactThreshold ) {
         this.buffer = buffer;
@@ -42,10 +44,8 @@ public class StatefulFixInStream implements FixInputStream {
 
     @Override
     public void onRead() {
-        logger.trace("On event: read {} bytes in {} | Stream state: {}@{}",
-                buffer.readRemaining(), buffer, streamState, offset);
-
-        //final long endReadPosition = buffer.readPosition() + readLen;
+        /*logger.trace("On event: read {} bytes in {} | Stream state: {}@{}",
+                buffer.readRemaining(), buffer, streamState, offset);*/
 
         while (buffer.readRemaining() > 0) {
             onRead(buffer.readByte(buffer.readPosition() + offset));
@@ -53,7 +53,7 @@ public class StatefulFixInStream implements FixInputStream {
     }
 
     private void onRead(final byte readByte) {
-        logger.trace("[state={}, rpos={}, rream={}, offset={}, ch='{}']", streamState, buffer.readPosition(), buffer.readRemaining(), offset, (char) readByte);
+        //logger.trace("[state={}, rpos={}, rream={}, offset={}, ch='{}']", streamState, buffer.readPosition(), buffer.readRemaining(), offset, (char) readByte);
         switch (streamState) {
             case VALUE_PROCESSING:
                 handleInValueProcessingState(readByte);
@@ -94,18 +94,26 @@ public class StatefulFixInStream implements FixInputStream {
         }
     }
 
+    private void handleEndOfMessage() {
+        callback.onMessageEnd();
+        switchState(StreamState.WAIT_FOR_FIX_BEGIN);
+        onWaitForMessage();
+        if (buffer.writePosition() > compactThreshold) {
+            buffer.compact();
+            //logger.trace("buffer compact: {}", buffer.toDebugString());
+        }
+    }
+
+    private void handleTagValue() {
+        readValue();
+        streamBehavior = callback.onField(tagNum, value);
+    }
+
     private void handleInValueProcessingState(final byte readByte) {
         if (isAsciiSOH(readByte)) {
-            readValue();
-            callback.onTagValue(tagNum, value);
-            if (tagNum == FixMessage.CheckSum) {
-                callback.onMessageEnd();
-                switchState(StreamState.WAIT_FOR_FIX_BEGIN);
-                onWaitForMessage();
-                if (buffer.writePosition() > compactThreshold) {
-                    buffer.compact();
-                    logger.trace("buffer compact: {}", buffer.toDebugString());
-                }
+            handleTagValue();
+            if (tagNum == FixMessageHeader.CheckSum || streamBehavior == BREAK) {
+                handleEndOfMessage();
             } else {
                 doTransitionToTagProcessing();
             }
@@ -114,15 +122,22 @@ public class StatefulFixInStream implements FixInputStream {
         }
     }
 
+    private void handleMessageBegin() {
+        callback.onMessageBegin(buffer, 0, 0);
+        streamBehavior = FixInStreamCallback.StreamBehavior.CONTINUE;
+        doTransitionToValueProcessing();
+    }
+
     private void handleInWaitForMessageState(final byte readByte) {
         if (isAsciiEquals(readByte)) {
             readTag();
-            if (tagNum == FixMessage.BeginString) {
-                callback.onMessageBegin();
-                doTransitionToValueProcessing();
+            if (tagNum == FixMessageHeader.BeginString) {
+                handleMessageBegin();
             } else {
-                doTransitionToError("BeginString(8) is expected in current state.");
+                skipOrDoTransitionToError("BeginString(8) is expected in current state.");
             }
+        } else if (isAsciiSOH(readByte)) {
+            skipOrDoTransitionToError("SOH is not expected in current state.");
         } else {
             offset++;
         }
@@ -168,6 +183,14 @@ public class StatefulFixInStream implements FixInputStream {
         savePosition();
     }
 
+    private void skipOrDoTransitionToError(final String error) {
+        if (streamBehavior == BREAK) {
+            savePosition();
+        } else {
+            doTransitionToError(error);
+        }
+    }
+
     private void doTransitionToError(final String error) {
         this.errorDesc = error;
         switchState(StreamState.ERROR);
@@ -179,7 +202,7 @@ public class StatefulFixInStream implements FixInputStream {
     }
 
     private void switchState(final StreamState newStreamState) {
-        logger.trace("Switched state from {} to {}", this.streamState, newStreamState);
+        //logger.trace("Switched state from {} to {}", this.streamState, newStreamState);
         this.streamState = newStreamState;
     }
 

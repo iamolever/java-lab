@@ -3,13 +3,14 @@ package org.ovr.javalab.fixnio;
 import com.lmax.nanofix.FixClient;
 import com.lmax.nanofix.FixClientFactory;
 import com.lmax.nanofix.fields.MsgType;
-import com.lmax.nanofix.incoming.FixMessage;
-import com.lmax.nanofix.incoming.FixMessageHandler;
 import com.lmax.nanofix.outgoing.FixMessageBuilder;
 import com.lmax.nanofix.transport.ConnectionObserver;
+import org.joda.time.DateTime;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.ovr.javalab.fixnio.connection.FixConnectionContext;
+import org.ovr.javalab.fixnio.core.FixEngine;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
@@ -18,49 +19,53 @@ import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class FixServiceTest {
+public class FixServerTest {
     private final String host = "localhost";
     private final int port = 2000;
-    private FixService fixService;
-    private Thread fixServiceThread;
+    private FixEngine fixServer;
 
     @BeforeEach
-    void beforeTest() {
+    void beforeTest() throws IOException {
+        fixServer = new FixEngine(host, port);
     }
 
     @AfterEach
     void afterTest() throws IOException, InterruptedException {
-        fixService.shutdown();
-        fixServiceThread.join();
-        fixService.close();
+        fixServer.shutdown();
+    }
+
+    private com.lmax.nanofix.outgoing.FixMessage buildLogon() {
+        return new FixMessageBuilder()
+                .messageType(MsgType.LOGIN)
+                .senderCompID("sender1")
+                .targetCompID("target1")
+                .msgSeqNum(1)
+                .sendingTime(DateTime.now())
+                .username("user1")
+                .build();
     }
 
     @Test
     void testAcceptorConnectAndLogon() throws InterruptedException {
         final CountDownLatch msgLeftToReceive = new CountDownLatch(1);
 
-        final Consumer<FixConnectionContext> handler = (context) -> {
-            System.out.println(context.readBuffer.toDebugString());
+        final Consumer<FixConnectionContext> connectionHandler = (context) -> {
+            System.out.println("New connection on server");
+        };
+        final Consumer<FixConnectionContext> readHandler = (context) -> {
+            System.out.println("read event: " + context.getReadBuffer().toDebugString());
             msgLeftToReceive.countDown();
         };
-
-        fixServiceThread = new Thread(() -> {
-            try {
-                fixService = new FixService(host, port);
-                fixService.doEventLoop(handler);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        });
-        fixServiceThread.start();
+        /*final Consumer<FixMessage> messageHandler = (context) -> {
+            System.out.println(context.getReadBuffer().toDebugString());
+            msgLeftToReceive.countDown();
+        };*/
+        fixServer.handleSocketConnectionWith(connectionHandler);
+        fixServer.handleSocketReadEventWith(readHandler);
+        fixServer.start();
 
         final FixClient client = FixClientFactory.createFixClient(host, port);
-        client.subscribeToAllMessages(new FixMessageHandler() {
-            @Override
-            public void onFixMessage(FixMessage fixMessage) {
-                System.out.println("Received fix message " + fixMessage.toFixString());
-            }
-        });
+        client.subscribeToAllMessages(fixMessage -> System.out.println("Received fix message " + fixMessage.toFixString()));
 
         client.registerTransportObserver(new ConnectionObserver() {
             @Override
@@ -77,7 +82,7 @@ public class FixServiceTest {
 
         assertTrue(client.isConnected());
 
-        client.send(new FixMessageBuilder().messageType(MsgType.LOGIN).username("hello").build());
+        client.send(buildLogon());
         msgLeftToReceive.await(1000, TimeUnit.MILLISECONDS);
         assertEquals(0, msgLeftToReceive.getCount());
     }

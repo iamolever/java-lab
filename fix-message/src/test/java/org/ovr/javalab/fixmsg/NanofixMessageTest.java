@@ -15,7 +15,7 @@ public class NanofixMessageTest {
                 .targetCompID("target1")
                 .msgSeqNum(1)
                 .sendingTime(DateTime.now())
-                .username("hello")
+                .username("hello1")
                 .build();
 
         System.out.println(fixMessage.toFixString());

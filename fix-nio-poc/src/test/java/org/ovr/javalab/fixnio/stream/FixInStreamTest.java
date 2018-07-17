@@ -1,4 +1,4 @@
-package org.ovr.javalab.stream;
+package org.ovr.javalab.fixnio.stream;
 
 import com.lmax.nanofix.fields.MsgType;
 import com.lmax.nanofix.outgoing.FixMessageBuilder;
@@ -6,14 +6,15 @@ import net.openhft.chronicle.bytes.Bytes;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.ovr.javalab.fixmsg.FixMessageHeader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class StatefulFixInStreamTest {
-    private final Logger logger = LoggerFactory.getLogger(StatefulFixInStreamTest.class);
+public class FixInStreamTest {
+    private final static Logger logger = LoggerFactory.getLogger(FixInStreamTest.class);
 
     private List<String> messages = new ArrayList<>();
 
@@ -27,7 +28,7 @@ public class StatefulFixInStreamTest {
                     .targetCompID("target" + i)
                     .msgSeqNum(i)
                     .sendingTime(DateTime.now())
-                    .username("hello_" + i)
+                    .username("user_" + i)
                     .build().toFixString();
             messages.add(logonMsg);
         }
@@ -37,8 +38,11 @@ public class StatefulFixInStreamTest {
     public void testFixInStream() {
         final FixInStreamCallback streamCallback = new FixInStreamCallback() {
             @Override
-            public void onMessageBegin() {
-                logger.debug("Begin of FIX message");
+            public void onMessageBegin(final Bytes buffer, final long offset, final long length) {
+                Bytes message = Bytes.allocateDirect(length);
+                message.write(buffer, 0, length);
+
+                logger.debug("Begin of FIX message: {}", message);
             }
 
             @Override
@@ -48,17 +52,18 @@ public class StatefulFixInStreamTest {
 
             @Override
             public AfterErrorBehavior onError(String errorDesc) {
-                return AfterErrorBehavior.BREAK;
+                return AfterErrorBehavior.FATAL;
             }
 
             @Override
-            public StreamBehavior onTagValue(int tagNum, Bytes buffer) {
+            public StreamBehavior onField(int tagNum, Bytes buffer) {
                 logger.debug("\t{}={}", tagNum, buffer.toString());
-                return StreamBehavior.CONTINUE;
+                return tagNum == FixMessageHeader.SendingTime ? StreamBehavior.BREAK : StreamBehavior.CONTINUE;
             }
         };
         final Bytes bytes = Bytes.elasticByteBuffer(256);
-        final StatefulFixInStream fixInStream = new StatefulFixInStream(bytes, streamCallback, 256);
+        //final StatefulFixInStream fixInStream = new StatefulFixInStream(bytes, streamCallback, 256);
+        final FixInputStream fixInStream = new FixInStreamSpliterator(bytes, streamCallback);
         final String message1 = messages.get(0);
         bytes.write(message1);
         fixInStream.onRead();
