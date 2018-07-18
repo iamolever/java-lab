@@ -47,56 +47,6 @@ public class FixInStreamDisruptorTest {
     }
 
     @Test
-    public void testFixInStream() {
-        final FixInStreamCallback streamCallback = new FixInStreamCallback() {
-            @Override
-            public void onMessageBegin(final Bytes buffer, final long offset, final long length) {
-                Bytes message = Bytes.allocateDirect(length);
-                message.write(buffer, 0, length);
-
-                logger.debug("Begin of FIX message: {}", message);
-            }
-
-            @Override
-            public void onMessageEnd() {
-                logger.debug("End of FIX message");
-            }
-
-            @Override
-            public AfterErrorBehavior onError(String errorDesc) {
-                return AfterErrorBehavior.FATAL;
-            }
-
-            @Override
-            public StreamBehavior onField(int tagNum, Bytes buffer) {
-                logger.debug("\t{}={}", tagNum, buffer.toString());
-                return tagNum == FixMessageHeader.SendingTime ? StreamBehavior.BREAK : StreamBehavior.CONTINUE;
-            }
-        };
-        final Bytes bytes = Bytes.elasticByteBuffer(256);
-        //final StatefulFixInStream fixInStream = new StatefulFixInStream(bytes, streamCallback, 256);
-        final FixInputStream fixInStream = new FixInStreamSpliterator(bytes, streamCallback);
-        final String message1 = messages.get(0);
-        bytes.write(message1);
-        fixInStream.onRead();
-
-        final String message2 = messages.get(1);
-        bytes.write(message2.subSequence(0, 10));
-        fixInStream.onRead();
-        bytes.write(message2.substring(10));
-        fixInStream.onRead();
-
-        for (int i = 2; i < messages.size(); i++) {
-            bytes.write(messages.get(i));
-        }
-        fixInStream.onRead();
-    }
-
-    /*public static void handleEvent(FixEvent event, long sequence, boolean endOfBatch) {
-        System.out.println(event);
-    }*/
-
-    @Test
     public void testDisruptor() {
         final CountDownLatch countDownLatch = new CountDownLatch(messages.size());
         // Specify the size of the ring buffer, must be power of 2.

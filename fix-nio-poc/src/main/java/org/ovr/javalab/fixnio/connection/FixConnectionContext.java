@@ -42,12 +42,19 @@ public class FixConnectionContext {
         return inStreamHandler;
     }
 
-    void handleInStreamWith(final FixInStreamCallback inStreamHandler) {
+    public void handleInStreamWith(final FixInStreamCallback inStreamHandler) {
         this.inStreamHandler = new FixInStreamSpliterator(this.readBuffer, inStreamHandler);
     }
 
     public void close() {
         IOTools.clean(this.getInByteBuffer());
         IOTools.clean(this.getOutByteBuffer());
+    }
+
+    @Override
+    public String toString() {
+        return "FixConnectionContext{" +
+                "channel=" + channel +
+                '}';
     }
 }

@@ -4,6 +4,7 @@ import org.ovr.javalab.fixnio.connection.FixConnectionContext;
 import org.ovr.javalab.fixnio.session.FixSession;
 
 import java.io.IOException;
+import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
 public class FixEngine {
@@ -27,13 +28,7 @@ public class FixEngine {
 
     private void initSocketLoopThread() throws IOException {
         this.socketEventLoop = new SocketEventLoop(host, port);
-        this.fixServiceThread = new Thread(() -> {
-            try {
-                socketEventLoop.doEventLoop();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        });
+        this.fixServiceThread = Executors.defaultThreadFactory().newThread(socketEventLoop);
     }
 
     public void handleSocketConnectionWith(final Consumer<FixConnectionContext> socketConnectionHandler) {
@@ -74,7 +69,6 @@ public class FixEngine {
     }
 
     private void handleFixConnection(final FixConnectionContext context) {
-        //todo:: assign to worker
         if (this.socketConnectionHandler != null) {
             this.socketConnectionHandler.accept(context);
         }

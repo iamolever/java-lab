@@ -6,15 +6,18 @@ import org.ovr.javalab.fixmsg.FixMessage;
 import org.ovr.javalab.fixmsg.FixMessageHeader;
 import org.ovr.javalab.fixmsg.util.ByteUtil;
 import org.ovr.javalab.fixmsg.util.FixMessageUtil;
+import org.ovr.javalab.fixnio.connection.FixConnectionContext;
 import org.ovr.javalab.fixnio.stream.FixInStreamCallback;
 
-public class InMessageEventProducer implements FixInStreamCallback {
-    private final RingBuffer<InMessageEvent> ringBuffer;
+public class FixMessageInEventProducer implements FixInStreamCallback {
+    private final RingBuffer<FixMessageInEvent> ringBuffer;
     private long sequence;
-    private InMessageEvent event;
+    private FixMessageInEvent event;
     private FixMessage fixMessage;
+    private FixConnectionContext context;
 
-    public InMessageEventProducer(RingBuffer<InMessageEvent> ringBuffer) {
+    public FixMessageInEventProducer(final FixConnectionContext context, final RingBuffer<FixMessageInEvent> ringBuffer) {
+        this.context = context;
         this.ringBuffer = ringBuffer;
     }
 
@@ -24,6 +27,7 @@ public class InMessageEventProducer implements FixInStreamCallback {
         this.event = ringBuffer.get(sequence);
         this.fixMessage = event.getFixMessage();
         this.event.getBytes().write(buffer, offset, length);
+        this.event.setFixConnectionContext(context);
     }
 
     @Override

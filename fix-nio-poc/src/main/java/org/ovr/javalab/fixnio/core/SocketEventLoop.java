@@ -2,6 +2,9 @@ package org.ovr.javalab.fixnio.core;
 
 import net.openhft.chronicle.bytes.Bytes;
 import org.ovr.javalab.fixnio.connection.FixConnectionContext;
+import org.ovr.javalab.fixnio.stream.FixInStreamSpliterator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -15,7 +18,9 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.function.Consumer;
 
-public class SocketEventLoop implements Closeable {
+public class SocketEventLoop implements Closeable, Runnable {
+    private final Logger logger = LoggerFactory.getLogger(SocketEventLoop.class);
+
     private final static boolean DEFAULT_TCP_NODELAY = true;
 
     private final String host;
@@ -86,6 +91,7 @@ public class SocketEventLoop implements Closeable {
         client.read(inBB);
         buffer.readLimit(inBB.position());
         this.socketReadHandler.accept(context);
+        context.getInStreamHandler().onRead();
     }
 
     private void handleWritableEvent(final SelectionKey key) throws IOException {
@@ -109,6 +115,15 @@ public class SocketEventLoop implements Closeable {
     public void shutdown() {
         this.stopFlag = true;
         this.selector.wakeup();
+    }
+
+    @Override
+    public void run() {
+        try {
+            doEventLoop();
+        } catch (IOException e) {
+            logger.error("Error in socket event loop", e);
+        }
     }
 
     @Override

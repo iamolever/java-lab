@@ -11,6 +11,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.ovr.javalab.fixnio.connection.FixConnectionContext;
 import org.ovr.javalab.fixnio.core.FixEngine;
+import org.ovr.javalab.fixnio.core.FixMessageInHandler;
+import org.ovr.javalab.fixnio.event.FixMessageInEvent;
+import org.ovr.javalab.fixnio.stream.FixInStreamDisruptorTest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
@@ -20,6 +25,8 @@ import java.util.function.Consumer;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class FixServerTest {
+    private final static Logger logger = LoggerFactory.getLogger(FixServerTest.class);
+
     private final String host = "localhost";
     private final int port = 2000;
     private FixEngine fixServer;
@@ -48,21 +55,27 @@ public class FixServerTest {
     @Test
     void testAcceptorConnectAndLogon() throws InterruptedException {
         final CountDownLatch msgLeftToReceive = new CountDownLatch(1);
+        final FixMessageInHandler inHandler = new FixMessageInHandler();
 
         final Consumer<FixConnectionContext> connectionHandler = (context) -> {
-            System.out.println("New connection on server");
+            inHandler.handleEventsFrom(context);
+            logger.debug("New connection on server. Context: {}", context);
         };
         final Consumer<FixConnectionContext> readHandler = (context) -> {
-            System.out.println("read event: " + context.getReadBuffer().toDebugString());
+            logger.debug("Read event: {}", context.getReadBuffer().toDebugString());
+            //msgLeftToReceive.countDown();
+        };
+        final Consumer<FixMessageInEvent> messageHandler = (event) -> {
+            logger.debug("FIX incoming event: {}", event);
             msgLeftToReceive.countDown();
         };
-        /*final Consumer<FixMessage> messageHandler = (context) -> {
-            System.out.println(context.getReadBuffer().toDebugString());
-            msgLeftToReceive.countDown();
-        };*/
+
         fixServer.handleSocketConnectionWith(connectionHandler);
         fixServer.handleSocketReadEventWith(readHandler);
         fixServer.start();
+
+        inHandler.handleEventsWith(messageHandler);
+        inHandler.run();
 
         final FixClient client = FixClientFactory.createFixClient(host, port);
         client.subscribeToAllMessages(fixMessage -> System.out.println("Received fix message " + fixMessage.toFixString()));
@@ -70,12 +83,12 @@ public class FixServerTest {
         client.registerTransportObserver(new ConnectionObserver() {
             @Override
             public void connectionEstablished() {
-                System.out.println("TCP Connection has been established.");
+                logger.debug("TCP Connection to server has been established");
             }
 
             @Override
             public void connectionClosed() {
-                System.out.println("TCP Connection Closed.");
+                System.out.println("TCP Connection to server has been closed");
             }
         });
         client.connect();
