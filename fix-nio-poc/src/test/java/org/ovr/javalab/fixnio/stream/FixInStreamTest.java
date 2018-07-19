@@ -7,6 +7,7 @@ import org.joda.time.DateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.ovr.javalab.fixmsg.FixMessageHeader;
+import org.ovr.javalab.fixmsg.util.FixMessageUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,8 +58,14 @@ public class FixInStreamTest {
 
             @Override
             public StreamBehavior onField(int tagNum, Bytes buffer) {
-                logger.debug("\t{}={}", tagNum, buffer.toString());
-                return tagNum == FixMessageHeader.SendingTime ? StreamBehavior.BREAK : StreamBehavior.CONTINUE;
+                /*logger.debug("\t{}={}", tagNum, buffer.toString());
+                return StreamBehavior.CONTINUE;*/
+                if (FixMessageUtil.isHeaderField(tagNum)) {
+                    logger.debug("\t{}={}", tagNum, buffer.toString());
+                    return StreamBehavior.CONTINUE;
+                } else {
+                    return StreamBehavior.BREAK;
+                }
             }
         };
         final Bytes bytes = Bytes.elasticByteBuffer(256);

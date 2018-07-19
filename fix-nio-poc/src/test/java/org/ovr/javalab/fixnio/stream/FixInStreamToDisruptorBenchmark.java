@@ -106,21 +106,25 @@ public class FixInStreamToDisruptorBenchmark {
 
         @Override
         public StreamBehavior onField(int tagNum, Bytes buffer) {
-            switch (tagNum) {
-                case FixMessageHeader.MsgType :
-                    fixMessage.setMsgType(FixMessageUtil.internMsgTypeId(buffer));
-                    break;
-                case FixMessageHeader.SenderCompID :
-                    fixMessage.setSenderCompId(FixMessageUtil.internCompId(buffer));
-                    break;
-                case FixMessageHeader.TargetCompID :
-                    fixMessage.setTargetCompId(FixMessageUtil.internCompId(buffer));
-                    break;
-                case FixMessageHeader.MsgSeqNum :
-                    fixMessage.setSeqNum(ByteUtil.readIntFromBuffer(buffer, 0, buffer.readRemaining()));
-                    break;
+            if (FixMessageUtil.isHeaderField(tagNum)) {
+                switch (tagNum) {
+                    case FixMessageHeader.MsgType:
+                        fixMessage.setMsgType(FixMessageUtil.internMsgTypeId(buffer));
+                        break;
+                    case FixMessageHeader.SenderCompID:
+                        fixMessage.setSenderCompId(FixMessageUtil.internCompId(buffer));
+                        break;
+                    case FixMessageHeader.TargetCompID:
+                        fixMessage.setTargetCompId(FixMessageUtil.internCompId(buffer));
+                        break;
+                    case FixMessageHeader.MsgSeqNum:
+                        fixMessage.setSeqNum(ByteUtil.readIntFromBuffer(buffer, 0, buffer.readRemaining()));
+                        break;
+                }
+                return StreamBehavior.CONTINUE;
+            } else {
+                return StreamBehavior.BREAK;
             }
-            return tagNum == FixMessageHeader.SendingTime ? StreamBehavior.BREAK : StreamBehavior.CONTINUE;
         }
 
         @Override

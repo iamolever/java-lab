@@ -3,8 +3,6 @@ package org.ovr.javalab.fixnio.stream;
 import com.lmax.nanofix.fields.MsgType;
 import com.lmax.nanofix.outgoing.FixMessageBuilder;
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.lang.collection.HugeCollections;
-import net.openhft.lang.collection.HugeQueue;
 import org.joda.time.DateTime;
 import org.openjdk.jmh.annotations.*;
 import org.ovr.javalab.fixmsg.FixMessage;
@@ -23,28 +21,18 @@ public class FixInStreamBenchmark {
             .sendingTime(DateTime.now())
             .username("hello1")
             .build().toFixString();
-    private final static HugeQueue<FixMessage> queue = HugeCollections.newQueue(FixMessage.class, 100*1000L);
 
     private final static FixInStreamCallback streamCallback = new FixInStreamCallback() {
-        private FixMessage fixMessage = queue.offer();
+        private FixMessage fixMessage = FixMessage.instance();
 
         @Override
         public void onMessageBegin(final Bytes buffer, final long offset, final long length) {
-            fixMessage = queue.offer();
-            /*Bytes message = fixMessage.getRawMessage();
-            if (fixMessage != null) {
-                message.clear();
-            } else {
-                message = Bytes.allocateDirect(length);
-                fixMessage.setRawMessage(message);
-            }*/
-            Bytes message = Bytes.allocateDirect(length);
-            message.write(buffer, 0, length);
+
         }
 
         @Override
         public void onMessageEnd() {
-
+            fixMessage.clear();
         }
 
         @Override
@@ -54,21 +42,25 @@ public class FixInStreamBenchmark {
 
         @Override
         public StreamBehavior onField(final int tagNum, final Bytes buffer) {
-            switch (tagNum) {
-                case FixMessageHeader.MsgType :
-                    fixMessage.setMsgType(FixMessageUtil.internMsgTypeId(buffer));
-                    break;
-                case FixMessageHeader.SenderCompID :
-                    fixMessage.setSenderCompId(FixMessageUtil.internCompId(buffer));
-                    break;
-                case FixMessageHeader.TargetCompID :
-                    fixMessage.setTargetCompId(FixMessageUtil.internCompId(buffer));
-                    break;
-                case FixMessageHeader.MsgSeqNum :
-                    fixMessage.setSeqNum(ByteUtil.readIntFromBuffer(buffer, 0, buffer.readRemaining()));
-                    break;
+            if (FixMessageUtil.isHeaderField(tagNum)) {
+                switch (tagNum) {
+                    case FixMessageHeader.MsgType:
+                        fixMessage.setMsgType(FixMessageUtil.internMsgTypeId(buffer));
+                        break;
+                    case FixMessageHeader.SenderCompID:
+                        fixMessage.setSenderCompId(FixMessageUtil.internCompId(buffer));
+                        break;
+                    case FixMessageHeader.TargetCompID:
+                        fixMessage.setTargetCompId(FixMessageUtil.internCompId(buffer));
+                        break;
+                    case FixMessageHeader.MsgSeqNum:
+                        fixMessage.setSeqNum(ByteUtil.readIntFromBuffer(buffer, 0, buffer.readRemaining()));
+                        break;
+                }
+                return StreamBehavior.CONTINUE;
+            } else {
+                return StreamBehavior.BREAK;
             }
-            return tagNum == FixMessageHeader.SendingTime ? StreamBehavior.BREAK : StreamBehavior.CONTINUE;
         }
     };
 
@@ -91,8 +83,6 @@ public class FixInStreamBenchmark {
     public void testStreamLatency() {
         bytes.write(logonMsg);
         fixInStream.onRead();
-        final FixMessage fixMessage = queue.take();
-        //System.out.println(fixMessage.getSenderCompId());
     }
 
     public static void main(String[] args) throws Exception {

@@ -47,7 +47,7 @@ public class FixInStreamSpliterator implements FixInputStream {
         while (buffer.readRemaining() > 0) {
             final long nextMsgOffset = buffer.indexOf(fixBeginPattern);
             if (nextMsgOffset > 0) {
-                onReadFixMessage(nextMsgOffset);
+                onReadFixMessage(nextMsgOffset + 1);
             } else {
                 final long chkSumIdx = buffer.indexOf(fixChkSumPattern);
                 if (chkSumIdx > 0) {
