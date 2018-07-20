@@ -18,7 +18,6 @@ import org.ovr.javalab.fixmsg.util.FixMessageUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -71,10 +70,9 @@ public class FixInStreamDisruptorTest {
 
         final FixEventProducer fixEventProducer = new FixEventProducer(ringBuffer);
         final Bytes bytes = Bytes.elasticByteBuffer(256);
-        final FixInputStream fixInStream = new FixInStreamSpliterator(bytes, fixEventProducer);
+        final FixInputStreamHandler fixInStream = new FixInStreamSpliterator(bytes, fixEventProducer);
         final String message1 = messages.get(0);
         bytes.write(message1);
-        //fixInStream.onRead();
 
         final String message2 = messages.get(1);
         bytes.write(message2.subSequence(0, 10));
@@ -99,17 +97,26 @@ public class FixInStreamDisruptorTest {
         private long sequence;
         private FixInStreamDisruptorTest.FixEvent event;
         private FixMessage fixMessage;
+        private final boolean clearBeforeFill;
+
+        public FixEventProducer(RingBuffer<FixInStreamDisruptorTest.FixEvent> ringBuffer, final boolean clearBeforeFill) {
+            this.ringBuffer = ringBuffer;
+            this.clearBeforeFill = clearBeforeFill;
+        }
 
         public FixEventProducer(RingBuffer<FixInStreamDisruptorTest.FixEvent> ringBuffer) {
             this.ringBuffer = ringBuffer;
+            this.clearBeforeFill = false;
         }
 
         @Override
         public void onMessageBegin(Bytes buffer, long offset, long length) {
             this.sequence = ringBuffer.next();
             this.event = ringBuffer.get(sequence);
+            if (clearBeforeFill) {
+                this.event.clear();
+            }
             this.fixMessage = event.getFixMessage();
-            //this.event.getBytes().clear();
             this.event.getBytes().write(buffer, offset, length);
         }
 

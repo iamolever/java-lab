@@ -1,5 +1,6 @@
 package org.ovr.javalab.fixmsg.util;
 
+import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.pool.StringInterner;
 
 import java.util.Arrays;
@@ -44,5 +45,9 @@ public abstract class FixMessageUtil {
 
     private static void calcHeaderFieldCache() {
         stdMessageHeaderFields.forEach(tag -> stdMessageHeaderFieldsCache[tag] = true);
+    }
+
+    public static int getChecksum(final Bytes bytes, final int begin, final int end) {
+        return bytes.byteCheckSum(begin, end);
     }
 }

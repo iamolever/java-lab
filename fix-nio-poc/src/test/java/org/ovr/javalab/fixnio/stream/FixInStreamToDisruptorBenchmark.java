@@ -38,8 +38,9 @@ public class FixInStreamToDisruptorBenchmark {
             FixInStreamDisruptorTest.FixEvent::new, ringBufferSize, Executors.defaultThreadFactory(),
             ProducerType.SINGLE, new BlockingWaitStrategy());
     private final static RingBuffer<FixInStreamDisruptorTest.FixEvent> ringBuffer = disruptor.getRingBuffer();
-    private final static FixEventProducer producer = new FixEventProducer(ringBuffer);
-    private final static FixInputStream fixInStream = new FixInStreamSpliterator(bytes, producer);
+    private final static FixInStreamDisruptorTest.FixEventProducer producer =
+            new FixInStreamDisruptorTest.FixEventProducer(ringBuffer, true);
+    private final static FixInputStreamHandler fixInStream = new FixInStreamSpliterator(bytes, producer);
 
     @Benchmark
     /*@BenchmarkMode(Mode.SampleTime)
@@ -65,7 +66,6 @@ public class FixInStreamToDisruptorBenchmark {
 
         // Start the Disruptor, starts all threads running
         disruptor.start();
-        //disruptor.
     }
 
     public static class FixEventHandler implements EventHandler<FixInStreamDisruptorTest.FixEvent> {
@@ -80,58 +80,6 @@ public class FixInStreamToDisruptorBenchmark {
         }
     }
 
-    public static class FixEventProducer implements FixInStreamCallback {
-        private final RingBuffer<FixInStreamDisruptorTest.FixEvent> ringBuffer;
-        private long sequence;
-        private FixInStreamDisruptorTest.FixEvent event;
-        private FixMessage fixMessage;
-
-        public FixEventProducer(RingBuffer<FixInStreamDisruptorTest.FixEvent> ringBuffer) {
-            this.ringBuffer = ringBuffer;
-        }
-
-        @Override
-        public void onMessageBegin(Bytes buffer, long offset, long length) {
-            this.sequence = ringBuffer.next();
-            this.event = ringBuffer.get(sequence);
-            this.fixMessage = event.getFixMessage();
-            this.event.getBytes().clear();
-            this.event.getBytes().write(buffer, offset, length);
-        }
-
-        @Override
-        public void onMessageEnd() {
-            ringBuffer.publish(sequence);
-        }
-
-        @Override
-        public StreamBehavior onField(int tagNum, Bytes buffer) {
-            if (FixMessageUtil.isHeaderField(tagNum)) {
-                switch (tagNum) {
-                    case FixMessageHeader.MsgType:
-                        fixMessage.setMsgType(FixMessageUtil.internMsgTypeId(buffer));
-                        break;
-                    case FixMessageHeader.SenderCompID:
-                        fixMessage.setSenderCompId(FixMessageUtil.internCompId(buffer));
-                        break;
-                    case FixMessageHeader.TargetCompID:
-                        fixMessage.setTargetCompId(FixMessageUtil.internCompId(buffer));
-                        break;
-                    case FixMessageHeader.MsgSeqNum:
-                        fixMessage.setSeqNum(ByteUtil.readIntFromBuffer(buffer, 0, buffer.readRemaining()));
-                        break;
-                }
-                return StreamBehavior.CONTINUE;
-            } else {
-                return StreamBehavior.BREAK;
-            }
-        }
-
-        @Override
-        public AfterErrorBehavior onError(String errorDesc) {
-            return null;
-        }
-    }
 
     public static void main(String[] args) throws Exception {
         runDisruptor();

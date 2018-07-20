@@ -6,7 +6,7 @@ import org.ovr.javalab.fixmsg.util.FixMessageUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class FixInStreamSpliterator implements FixInputStream {
+public class FixInStreamSpliterator implements FixInputStreamHandler {
     private final Logger logger = LoggerFactory.getLogger(FixInStreamSpliterator.class);
 
     private final Bytes buffer;

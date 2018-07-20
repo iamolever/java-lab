@@ -66,7 +66,7 @@ public class FixInStreamBenchmark {
 
     private final static long bufferSize = 256*1000;
     private final static Bytes bytes = Bytes.allocateElasticDirect((int)bufferSize);
-    private final static FixInputStream fixInStream = new FixInStreamSpliterator(bytes, streamCallback);
+    private final static FixInputStreamHandler fixInStream = new FixInStreamSpliterator(bytes, streamCallback);
 
     @Benchmark
     /*@BenchmarkMode(Mode.SampleTime)

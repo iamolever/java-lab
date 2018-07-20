@@ -8,7 +8,7 @@ import org.ovr.javalab.fixmsg.util.FixMessageUtil;
 import static org.ovr.javalab.fixnio.stream.FixInStreamCallback.StreamBehavior.BREAK;
 
 @Deprecated
-public class StatefulFixInStream implements FixInputStream {
+public class StatefulFixInStreamHandler implements FixInputStreamHandler {
     private final static int DEFAULT_COMPACT_THRESHOLD = 32678;
     //private final Logger logger = LoggerFactory.getLogger(StatefulFixInStream.class);
 
@@ -24,14 +24,14 @@ public class StatefulFixInStream implements FixInputStream {
     private StreamState streamState = StreamState.INIT;
     private FixInStreamCallback.StreamBehavior streamBehavior = FixInStreamCallback.StreamBehavior.CONTINUE;
 
-    public StatefulFixInStream(final Bytes buffer, final FixInStreamCallback callback, final int compactThreshold ) {
+    public StatefulFixInStreamHandler(final Bytes buffer, final FixInStreamCallback callback, final int compactThreshold ) {
         this.buffer = buffer;
         this.callback = callback;
         this.compactThreshold = compactThreshold;
         this.onInitState();
     }
 
-    public StatefulFixInStream(final Bytes buffer, final FixInStreamCallback callback) {
+    public StatefulFixInStreamHandler(final Bytes buffer, final FixInStreamCallback callback) {
         this.buffer = buffer;
         this.callback = callback;
         this.onInitState();

@@ -6,7 +6,6 @@ import net.openhft.chronicle.bytes.Bytes;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.ovr.javalab.fixmsg.FixMessageHeader;
 import org.ovr.javalab.fixmsg.util.FixMessageUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,8 +57,6 @@ public class FixInStreamTest {
 
             @Override
             public StreamBehavior onField(int tagNum, Bytes buffer) {
-                /*logger.debug("\t{}={}", tagNum, buffer.toString());
-                return StreamBehavior.CONTINUE;*/
                 if (FixMessageUtil.isHeaderField(tagNum)) {
                     logger.debug("\t{}={}", tagNum, buffer.toString());
                     return StreamBehavior.CONTINUE;
@@ -69,8 +66,7 @@ public class FixInStreamTest {
             }
         };
         final Bytes bytes = Bytes.elasticByteBuffer(256);
-        //final StatefulFixInStream fixInStream = new StatefulFixInStream(bytes, streamCallback, 256);
-        final FixInputStream fixInStream = new FixInStreamSpliterator(bytes, streamCallback);
+        final FixInputStreamHandler fixInStream = new FixInStreamSpliterator(bytes, streamCallback);
         final String message1 = messages.get(0);
         bytes.write(message1);
         fixInStream.onRead();
