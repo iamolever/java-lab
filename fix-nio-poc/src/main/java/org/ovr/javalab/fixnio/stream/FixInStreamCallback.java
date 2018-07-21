@@ -6,9 +6,9 @@ public interface FixInStreamCallback {
 
     void onMessageBegin(final Bytes buffer, final long offset, final long length);
 
-    void onMessageEnd();
+    void onMessageEnd(final int headerLen);
 
-    StreamBehavior onField(final int tagNum, final Bytes buffer);
+    StreamBehavior onField(final boolean isBodyField, final int tagNum, final Bytes buffer);
 
     AfterErrorBehavior onError(final String errorDesc);
 

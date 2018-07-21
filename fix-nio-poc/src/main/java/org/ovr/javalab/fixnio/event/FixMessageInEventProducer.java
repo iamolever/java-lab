@@ -26,30 +26,31 @@ public class FixMessageInEventProducer implements FixInStreamCallback {
         this.sequence = ringBuffer.next();
         this.event = ringBuffer.get(sequence);
         this.fixMessage = event.getFixMessage();
-        this.event.getBytes().write(buffer, offset, length);
+        this.fixMessage.getRawMessage().write(buffer, offset, length);
         this.event.setFixConnectionContext(context);
     }
 
     @Override
-    public void onMessageEnd() {
+    public void onMessageEnd(final int headerLen) {
+        this.fixMessage.setHeaderLength(headerLen);
         ringBuffer.publish(sequence);
     }
 
     @Override
-    public StreamBehavior onField(int tagNum, Bytes buffer) {
-        if (FixMessageUtil.isHeaderField(tagNum)) {
+    public StreamBehavior onField(final boolean isBodyField, final int tagNum, final Bytes value) {
+        if (!isBodyField) {
             switch (tagNum) {
                 case FixMessageHeader.MsgType:
-                    fixMessage.setMsgType(FixMessageUtil.internMsgTypeId(buffer));
+                    fixMessage.setMsgType(FixMessageUtil.internMsgTypeId(value));
                     break;
                 case FixMessageHeader.SenderCompID:
-                    fixMessage.setSenderCompId(FixMessageUtil.internCompId(buffer));
+                    fixMessage.setSenderCompId(FixMessageUtil.internCompId(value));
                     break;
                 case FixMessageHeader.TargetCompID:
-                    fixMessage.setTargetCompId(FixMessageUtil.internCompId(buffer));
+                    fixMessage.setTargetCompId(FixMessageUtil.internCompId(value));
                     break;
                 case FixMessageHeader.MsgSeqNum:
-                    fixMessage.setSeqNum(ByteUtil.readIntFromBuffer(buffer, 0, buffer.readRemaining()));
+                    fixMessage.setSeqNum(ByteUtil.readIntFromBuffer(value, 0, value.readRemaining()));
                     break;
             }
             return StreamBehavior.CONTINUE;

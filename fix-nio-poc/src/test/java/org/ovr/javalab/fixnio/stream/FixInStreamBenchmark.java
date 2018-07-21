@@ -31,7 +31,7 @@ public class FixInStreamBenchmark {
         }
 
         @Override
-        public void onMessageEnd() {
+        public void onMessageEnd(final int headerLen) {
             fixMessage.clear();
         }
 
@@ -41,8 +41,8 @@ public class FixInStreamBenchmark {
         }
 
         @Override
-        public StreamBehavior onField(final int tagNum, final Bytes buffer) {
-            if (FixMessageUtil.isHeaderField(tagNum)) {
+        public StreamBehavior onField(final boolean isBodyField, final int tagNum, final Bytes buffer) {
+            if (!isBodyField) {
                 switch (tagNum) {
                     case FixMessageHeader.MsgType:
                         fixMessage.setMsgType(FixMessageUtil.internMsgTypeId(buffer));

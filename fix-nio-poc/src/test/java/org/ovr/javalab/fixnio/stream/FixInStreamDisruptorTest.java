@@ -110,36 +110,36 @@ public class FixInStreamDisruptorTest {
         }
 
         @Override
-        public void onMessageBegin(Bytes buffer, long offset, long length) {
+        public void onMessageBegin(final Bytes buffer, final long offset, final long length) {
             this.sequence = ringBuffer.next();
             this.event = ringBuffer.get(sequence);
             if (clearBeforeFill) {
                 this.event.clear();
             }
             this.fixMessage = event.getFixMessage();
-            this.event.getBytes().write(buffer, offset, length);
+            this.fixMessage.getRawMessage().write(buffer, offset, length);
         }
 
         @Override
-        public void onMessageEnd() {
+        public void onMessageEnd(final int headerLen) {
             ringBuffer.publish(sequence);
         }
 
         @Override
-        public StreamBehavior onField(int tagNum, Bytes buffer) {
-            if (FixMessageUtil.isHeaderField(tagNum)) {
+        public StreamBehavior onField(final boolean isBodyField, final int tagNum, final Bytes value) {
+            if (!isBodyField) {
                 switch (tagNum) {
                     case FixMessageHeader.MsgType:
-                        fixMessage.setMsgType(FixMessageUtil.internMsgTypeId(buffer));
+                        fixMessage.setMsgType(FixMessageUtil.internMsgTypeId(value));
                         break;
                     case FixMessageHeader.SenderCompID:
-                        fixMessage.setSenderCompId(FixMessageUtil.internCompId(buffer));
+                        fixMessage.setSenderCompId(FixMessageUtil.internCompId(value));
                         break;
                     case FixMessageHeader.TargetCompID:
-                        fixMessage.setTargetCompId(FixMessageUtil.internCompId(buffer));
+                        fixMessage.setTargetCompId(FixMessageUtil.internCompId(value));
                         break;
                     case FixMessageHeader.MsgSeqNum:
-                        fixMessage.setSeqNum(ByteUtil.readIntFromBuffer(buffer, 0, buffer.readRemaining()));
+                        fixMessage.setSeqNum(ByteUtil.readIntFromBuffer(value, 0, value.readRemaining()));
                         break;
                 }
                 return StreamBehavior.CONTINUE;
@@ -154,29 +154,22 @@ public class FixInStreamDisruptorTest {
         }
     }
 
-
     public static class FixEvent {
-        private Bytes bytes = Bytes.allocateElasticDirect(512);
         private FixMessage fixMessage = FixMessage.instance();
 
-        public Bytes getBytes() {
-            return bytes;
+        FixMessage getFixMessage() {
+            return fixMessage;
         }
 
-        public FixMessage getFixMessage() {
-            return fixMessage;
+        public void clear() {
+            fixMessage.clear();
         }
 
         @Override
         public String toString() {
             return "FixEvent{" +
-                    "bytes=" + bytes +
-                    ", fixMessage=" + fixMessage +
+                    "fixMessage=" + fixMessage +
                     '}';
-        }
-
-        public void clear() {
-            bytes.clear();
         }
     }
 }

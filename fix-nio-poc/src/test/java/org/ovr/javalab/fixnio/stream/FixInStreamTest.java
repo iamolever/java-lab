@@ -6,6 +6,11 @@ import net.openhft.chronicle.bytes.Bytes;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.ovr.javalab.fixmsg.FixMessage;
+import org.ovr.javalab.fixmsg.FixMessageHeader;
+import org.ovr.javalab.fixmsg.FixVersion;
+import org.ovr.javalab.fixmsg.util.ByteUtil;
+import org.ovr.javalab.fixmsg.util.FixMessageEncoder;
 import org.ovr.javalab.fixmsg.util.FixMessageUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,7 +51,7 @@ public class FixInStreamTest {
             }
 
             @Override
-            public void onMessageEnd() {
+            public void onMessageEnd(final int headerLen) {
                 logger.debug("End of FIX message");
             }
 
@@ -56,8 +61,8 @@ public class FixInStreamTest {
             }
 
             @Override
-            public StreamBehavior onField(int tagNum, Bytes buffer) {
-                if (FixMessageUtil.isHeaderField(tagNum)) {
+            public StreamBehavior onField(final boolean isBodyField, int tagNum, Bytes buffer) {
+                if (!isBodyField) {
                     logger.debug("\t{}={}", tagNum, buffer.toString());
                     return StreamBehavior.CONTINUE;
                 } else {
@@ -81,5 +86,59 @@ public class FixInStreamTest {
             bytes.write(messages.get(i));
         }
         fixInStream.onRead();
+    }
+
+    @Test
+    public void testFixEncoderFromInputStream() {
+        final FixMessage fixMessage = FixMessage.instance();
+        final FixInStreamCallback streamCallback = new FixInStreamCallback() {
+
+            @Override
+            public void onMessageBegin(final Bytes buffer, final long offset, final long length) {
+                fixMessage.getRawMessage().write(buffer, offset, length);
+            }
+
+            @Override
+            public void onMessageEnd(final int headerLen) {
+                fixMessage.setHeaderLength(headerLen);
+            }
+
+            @Override
+            public StreamBehavior onField(final boolean isBodyField, final int tagNum, final Bytes value) {
+                if (!isBodyField) {
+                    switch (tagNum) {
+                        case FixMessageHeader.MsgType:
+                            fixMessage.setMsgType(FixMessageUtil.internMsgTypeId(value));
+                            break;
+                        case FixMessageHeader.SenderCompID:
+                            fixMessage.setSenderCompId(FixMessageUtil.internCompId(value));
+                            break;
+                        case FixMessageHeader.TargetCompID:
+                            fixMessage.setTargetCompId(FixMessageUtil.internCompId(value));
+                            break;
+                        case FixMessageHeader.MsgSeqNum:
+                            fixMessage.setSeqNum(ByteUtil.readIntFromBuffer(value, 0, value.readRemaining()));
+                            break;
+                    }
+                    return StreamBehavior.CONTINUE;
+                } else {
+                    return StreamBehavior.BREAK;
+                }
+            }
+
+            @Override
+            public AfterErrorBehavior onError(String errorDesc) {
+                return null;
+            }
+        };
+        final Bytes inBuffer = Bytes.elasticByteBuffer(256);
+        final FixInputStreamHandler fixInStream = new FixInStreamSpliterator(inBuffer, streamCallback);
+        final String message1 = messages.get(0);
+        inBuffer.write(message1);
+        fixInStream.onRead();
+
+        final Bytes outBuffer = Bytes.elasticByteBuffer(256);
+        FixMessageEncoder.stdEncoder(FixVersion.FIX44).encodeMessage(outBuffer, fixMessage);
+        System.out.println(outBuffer);
     }
 }

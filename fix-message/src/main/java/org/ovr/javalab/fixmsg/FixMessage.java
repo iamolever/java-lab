@@ -1,12 +1,9 @@
 package org.ovr.javalab.fixmsg;
 
+import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.lang.model.constraints.MaxSize;
 
 public interface FixMessage {
-    static FixMessage instance() {
-        return new FixMessageImpl();
-    }
-
     long getSeqNum();
     void setSeqNum(final long seqNum);
 
@@ -20,9 +17,23 @@ public interface FixMessage {
     String getTargetCompId();
     void setTargetCompId(@MaxSize(256) final String targetCompId);
 
+    Bytes getRawMessage();
+
+    int getHeaderLength();
+    void setHeaderLength(final int headerLength);
+
     void clear();
 
-    class FixMessageImpl implements FixMessage {
+    static FixMessage instance() {
+        return new StdFixMessage();
+    }
+
+    class StdFixMessage implements FixMessage {
+        private final static int DEFAULT_BUFFER_SIZE = 512;
+
+        private Bytes bytes = Bytes.allocateElasticDirect(DEFAULT_BUFFER_SIZE);
+        private int headerLength;
+
         private long seqNum;
         private String msgType;
         private String senderCompId;
@@ -69,7 +80,23 @@ public interface FixMessage {
         }
 
         @Override
+        public Bytes getRawMessage() {
+            return this.bytes;
+        }
+
+        @Override
+        public int getHeaderLength() {
+            return this.headerLength;
+        }
+
+        @Override
+        public void setHeaderLength(final int headerLength) {
+            this.headerLength = headerLength;
+        }
+
+        @Override
         public void clear() {
+            this.bytes.clear();
             this.senderCompId = null;
             this.targetCompId = null;
             this.seqNum = 0;
@@ -78,8 +105,9 @@ public interface FixMessage {
 
         @Override
         public String toString() {
-            return "FixMessageImpl{" +
-                    "seqNum=" + seqNum +
+            return "StdFixMessage{" +
+                    "bytes=" + bytes +
+                    ", seqNum=" + seqNum +
                     ", msgType='" + msgType + '\'' +
                     ", senderCompId='" + senderCompId + '\'' +
                     ", targetCompId='" + targetCompId + '\'' +

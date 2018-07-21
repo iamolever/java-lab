@@ -6,6 +6,8 @@ import org.ovr.javalab.fixmsg.util.FixMessageUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.ovr.javalab.fixmsg.util.FixMessageUtil.CHKSUM_FIELS_LEN;
+
 public class FixInStreamSpliterator implements FixInputStreamHandler {
     private final Logger logger = LoggerFactory.getLogger(FixInStreamSpliterator.class);
 
@@ -15,8 +17,12 @@ public class FixInStreamSpliterator implements FixInputStreamHandler {
     private final Bytes value = Bytes.elasticByteBuffer();
     private FixInStreamCallback callback;
 
+    private long startReadPosition;
+    private long stopReadPosition;
+    private int headerLen = 0;
     private int offset = 0;
     private int tagNum;
+    private boolean isBody = false;
 
     public FixInStreamSpliterator(final Bytes buffer, final FixInStreamCallback callback) {
         this.buffer = buffer;
@@ -51,7 +57,7 @@ public class FixInStreamSpliterator implements FixInputStreamHandler {
             } else {
                 final long chkSumIdx = buffer.indexOf(fixChkSumPattern);
                 if (chkSumIdx > 0) {
-                    final long endOfMsgIdx = chkSumIdx + 7;
+                    final long endOfMsgIdx = chkSumIdx + CHKSUM_FIELS_LEN;
                     onReadFixMessage(endOfMsgIdx);
                     buffer.clear();
                 } else {
@@ -63,23 +69,35 @@ public class FixInStreamSpliterator implements FixInputStreamHandler {
     }
 
     private void onReadFixMessage(final long nextMsgOffset) {
+        this.headerLen = 0;
+        this.startReadPosition = buffer.readPosition();
+        this.stopReadPosition = startReadPosition + nextMsgOffset;
         doFieldIterator(nextMsgOffset);
+        isBody = false;
+        callback.onMessageEnd(headerLen);
+    }
+
+    private FixInStreamCallback.StreamBehavior handleField() {
+        if (!this.isBody) {
+            this.isBody = !FixMessageUtil.isHeaderField(this.tagNum);
+            if (!isBody) {
+                this.headerLen = (int) (buffer.readPosition() - this.startReadPosition);
+            }
+        }
+        return callback.onField(isBody, tagNum, value);
     }
 
     private void doFieldIterator(final long nextMsgOffset) {
-        final long stopReadPosition = buffer.readPosition() + nextMsgOffset;
-        callback.onMessageBegin(buffer, buffer.readPosition(), nextMsgOffset);
+        callback.onMessageBegin(buffer, this.startReadPosition, nextMsgOffset);
         while (buffer.readPosition() < stopReadPosition) {
             value.clear();
             doTag();
             doValue();
-            final FixInStreamCallback.StreamBehavior state = callback.onField(tagNum, value);
-            if (state == FixInStreamCallback.StreamBehavior.BREAK) {
+            if (handleField() == FixInStreamCallback.StreamBehavior.BREAK) {
                 buffer.readPosition(stopReadPosition);
                 break;
             }
         }
-        callback.onMessageEnd();
     }
 
     private void doTag() {
