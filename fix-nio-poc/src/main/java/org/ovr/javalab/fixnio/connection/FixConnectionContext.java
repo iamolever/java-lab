@@ -2,6 +2,9 @@ package org.ovr.javalab.fixnio.connection;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.io.IOTools;
+import org.ovr.javalab.fixnio.common.FixMessageCircularQueue;
+import org.ovr.javalab.fixnio.session.AcceptorFixSession;
+import org.ovr.javalab.fixnio.session.FixSession;
 import org.ovr.javalab.fixnio.stream.FixInStreamCallback;
 import org.ovr.javalab.fixnio.stream.FixInStreamSpliterator;
 
@@ -13,9 +16,12 @@ public class FixConnectionContext {
     private final Bytes readBuffer = Bytes.elasticByteBuffer();
     private final Bytes writeBuffer = Bytes.elasticByteBuffer();
     private FixInStreamSpliterator inStreamHandler;
+    private FixMessageCircularQueue outgoingQueue;
+    private FixSession fixSession;
 
     public FixConnectionContext(final SocketChannel channel) {
         this.channel = channel;
+        this.fixSession = new AcceptorFixSession(this);
     }
 
     public SocketChannel getChannel() {
@@ -44,6 +50,22 @@ public class FixConnectionContext {
 
     public void handleInStreamWith(final FixInStreamCallback inStreamHandler) {
         this.inStreamHandler = new FixInStreamSpliterator(this.readBuffer, inStreamHandler);
+    }
+
+    public void initOutgoingQueue(final int capacity) {
+        this.outgoingQueue = new FixMessageCircularQueue(capacity);
+    }
+
+    public FixMessageCircularQueue getOutgoingQueue() {
+        return outgoingQueue;
+    }
+
+    public FixSession getFixSession() {
+        return fixSession;
+    }
+
+    public void setFixSession(final FixSession fixSession) {
+        this.fixSession = fixSession;
     }
 
     public void close() {

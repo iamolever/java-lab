@@ -7,6 +7,7 @@ import org.ovr.javalab.fixmsg.FixMessageHeader;
 import org.ovr.javalab.fixmsg.util.ByteUtil;
 import org.ovr.javalab.fixmsg.util.FixMessageUtil;
 import org.ovr.javalab.fixnio.connection.FixConnectionContext;
+import org.ovr.javalab.fixnio.core.FixMessageInEvent;
 import org.ovr.javalab.fixnio.stream.FixInStreamCallback;
 
 public class FixMessageInEventProducer implements FixInStreamCallback {

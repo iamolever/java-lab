@@ -2,7 +2,6 @@ package org.ovr.javalab.fixnio.core;
 
 import net.openhft.chronicle.bytes.Bytes;
 import org.ovr.javalab.fixnio.connection.FixConnectionContext;
-import org.ovr.javalab.fixnio.stream.FixInStreamSpliterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,6 +69,11 @@ public class SocketEventLoop implements Closeable, Runnable {
             final Iterator<SelectionKey> eventIterator = selectedKeys.iterator();
             while (eventIterator.hasNext()) {
                 final SelectionKey key = eventIterator.next();
+                eventIterator.remove();
+
+                if (!key.isValid()) { //is it really required?
+                    continue;
+                }
 
                 if (key.isReadable()) {
                     handleReadableEvent(key);
@@ -78,27 +82,26 @@ public class SocketEventLoop implements Closeable, Runnable {
                 } else if (key.isAcceptable()) {
                     handleAcceptableEvent(key);
                 }
-                eventIterator.remove();
             }
         }
     }
 
     private void handleReadableEvent(final SelectionKey key) throws IOException {
         final FixConnectionContext context = (FixConnectionContext) key.attachment();
-        final Bytes buffer = context.getReadBuffer();
         final ByteBuffer inBB = context.getInByteBuffer();
         final SocketChannel client = (SocketChannel) key.channel();
-        client.read(inBB);
-        buffer.readLimit(inBB.position());
-        this.socketReadHandler.accept(context);
-        context.getInStreamHandler().onRead();
+        final int read = client.read(inBB);
+        if (read > 0) {
+            final Bytes buffer = context.getReadBuffer();
+            buffer.readLimit(inBB.position());
+            this.socketReadHandler.accept(context);
+            context.getInStreamHandler().onRead();
+        }
     }
 
     private void handleWritableEvent(final SelectionKey key) throws IOException {
         final FixConnectionContext context = (FixConnectionContext) key.attachment();
-        final SocketChannel client = (SocketChannel) key.channel();
-        //final ByteBuffer inBB = context.getInByteBuffer();
-        //client.read(inBB);
+        //final SocketChannel client = (SocketChannel) key.channel();
         this.socketWriteHandler.accept(context);
     }
 
@@ -106,7 +109,7 @@ public class SocketEventLoop implements Closeable, Runnable {
         final SocketChannel client = serverSocket.accept();
         client.socket().setTcpNoDelay(tcpNoDelay);
         client.configureBlocking(false);
-        final SelectionKey clientKey = client.register(selector, SelectionKey.OP_READ);
+        final SelectionKey clientKey = client.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
         final FixConnectionContext context = new FixConnectionContext(client);
         clientKey.attach(context);
         this.socketConnectionHandler.accept(context);

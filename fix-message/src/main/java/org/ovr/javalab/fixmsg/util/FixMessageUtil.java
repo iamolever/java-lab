@@ -58,4 +58,12 @@ public abstract class FixMessageUtil {
     public static OffsetDateTime getNowAsUTC() {
         return OffsetDateTime.now(ZoneOffset.UTC);
     }
+
+    public static boolean isAdminMsg(final String type) {
+        return type.length() == 1 && isAdminMsg(type.charAt(0));
+    }
+
+    public static boolean isAdminMsg(final char type) {
+        return (type >= '0' && type <= '5') || type == 'A';
+    }
 }

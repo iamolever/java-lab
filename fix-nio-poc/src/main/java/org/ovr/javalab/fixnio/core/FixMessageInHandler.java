@@ -5,7 +5,6 @@ import com.lmax.disruptor.RingBuffer;
 import com.lmax.disruptor.dsl.Disruptor;
 import com.lmax.disruptor.dsl.ProducerType;
 import org.ovr.javalab.fixnio.connection.FixConnectionContext;
-import org.ovr.javalab.fixnio.event.FixMessageInEvent;
 import org.ovr.javalab.fixnio.event.FixMessageInEventProducer;
 
 import java.io.Closeable;
@@ -16,16 +15,20 @@ import java.util.function.Consumer;
 public class FixMessageInHandler implements Runnable, Closeable {
     private final static int DEFAULT_EVENT_BUFFER_SIZE = 1024;
     private int eventBufferSize;
+
+    private final FixEventInHandler fixEventInHandler;
     private Disruptor<FixMessageInEvent> disruptor;
     private RingBuffer<FixMessageInEvent> ringBuffer;
     private Consumer<FixMessageInEvent> messageInEventConsumer;
 
-    public FixMessageInHandler() {
+    FixMessageInHandler(final FixEventInHandler fixEventInHandler) {
+        this.fixEventInHandler = fixEventInHandler;
         this.eventBufferSize = DEFAULT_EVENT_BUFFER_SIZE;
         init();
     }
 
-    public FixMessageInHandler(final int eventBufferSize) {
+    FixMessageInHandler(final FixEventInHandler fixEventInHandler, final int eventBufferSize) {
+        this.fixEventInHandler = fixEventInHandler;
         this.eventBufferSize = eventBufferSize;
         init();
     }
@@ -47,7 +50,10 @@ public class FixMessageInHandler implements Runnable, Closeable {
     }
 
     private void handle(final FixMessageInEvent event, final long sequence, final boolean endOfBatch) {
-        messageInEventConsumer.accept(event);
+        this.fixEventInHandler.onFixEvent(event);
+        //if (event.isAdminEvent()) {
+            messageInEventConsumer.accept(event);
+        //}
         event.clear();
     }
 

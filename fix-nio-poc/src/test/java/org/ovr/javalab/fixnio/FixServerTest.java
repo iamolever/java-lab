@@ -2,6 +2,7 @@ package org.ovr.javalab.fixnio;
 
 import com.lmax.nanofix.FixClient;
 import com.lmax.nanofix.FixClientFactory;
+import com.lmax.nanofix.fields.EncryptMethod;
 import com.lmax.nanofix.fields.MsgType;
 import com.lmax.nanofix.outgoing.FixMessageBuilder;
 import com.lmax.nanofix.transport.ConnectionObserver;
@@ -12,7 +13,9 @@ import org.junit.jupiter.api.Test;
 import org.ovr.javalab.fixnio.connection.FixConnectionContext;
 import org.ovr.javalab.fixnio.core.FixEngine;
 import org.ovr.javalab.fixnio.core.FixMessageInHandler;
-import org.ovr.javalab.fixnio.event.FixMessageInEvent;
+import org.ovr.javalab.fixnio.core.FixMessageInEvent;
+import org.ovr.javalab.fixnio.session.FixSessionState;
+import org.ovr.javalab.fixnio.session.FixSessionStateConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,14 +50,16 @@ public class FixServerTest {
                 .targetCompID("target1")
                 .msgSeqNum(1)
                 .sendingTime(DateTime.now())
+                .encryptMethod(EncryptMethod.NONE)
+                .heartBtInt(30)
                 .username("user1")
                 .build();
     }
 
     @Test
-    void testAcceptorConnectAndLogon() throws InterruptedException {
+    void smokeTest() throws InterruptedException {
         final CountDownLatch msgLeftToReceive = new CountDownLatch(1);
-        final FixMessageInHandler inHandler = new FixMessageInHandler();
+        final FixMessageInHandler inHandler = fixServer.newEventHandler();
 
         final Consumer<FixConnectionContext> connectionHandler = (context) -> {
             inHandler.handleEventsFrom(context);
@@ -62,15 +67,26 @@ public class FixServerTest {
         };
         final Consumer<FixConnectionContext> readHandler = (context) -> {
             logger.debug("Read event: {}", context.getReadBuffer().toDebugString());
-            //msgLeftToReceive.countDown();
+        };
+        final Consumer<FixConnectionContext> writeHandler = (context) -> {
+            //logger.debug("Write event: {}", context);
+        };
+        final Consumer<FixMessageInEvent> newSessionHandler = (event) -> {
+            logger.debug("Accepted FIX session: {}", event.getFixConnectionContext().getFixSession());
+        };
+        final FixSessionStateConsumer sessionStateHandler = (session, prevState, newState) -> {
+            logger.debug("FIX Session '{}-{}' state changed from {} to {}",
+                    session.getSenderCompId(), session.getTargetCompId(), prevState, newState);
         };
         final Consumer<FixMessageInEvent> messageHandler = (event) -> {
             logger.debug("FIX incoming event: {}", event);
             msgLeftToReceive.countDown();
         };
-
         fixServer.handleSocketConnectionWith(connectionHandler);
         fixServer.handleSocketReadEventWith(readHandler);
+        fixServer.handleSocketWriteEventWith(writeHandler);
+        fixServer.handleNewFixSessionWith(newSessionHandler);
+        fixServer.handleFixSessionStateWith(sessionStateHandler);
         fixServer.start();
 
         inHandler.handleEventsWith(messageHandler);

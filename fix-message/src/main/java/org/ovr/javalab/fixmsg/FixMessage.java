@@ -1,7 +1,6 @@
 package org.ovr.javalab.fixmsg;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.lang.model.constraints.MaxSize;
 
 public interface FixMessage {
     long getSeqNum();
@@ -9,13 +8,14 @@ public interface FixMessage {
 
     String getMsgType();
 
-    void setMsgType(@MaxSize(3) final String msgType);
+    void setMsgType(final MessageType msgType);
+    void setMsgType(final String msgType);
 
     String getSenderCompId();
-    void setSenderCompId(@MaxSize(256) final String senderCompId);
+    void setSenderCompId(final String senderCompId);
 
     String getTargetCompId();
-    void setTargetCompId(@MaxSize(256) final String targetCompId);
+    void setTargetCompId(final String targetCompId);
 
     Bytes getRawMessage();
 
@@ -32,7 +32,7 @@ public interface FixMessage {
         private final static int DEFAULT_BUFFER_SIZE = 512;
 
         private Bytes bytes = Bytes.allocateElasticDirect(DEFAULT_BUFFER_SIZE);
-        private int headerLength;
+        private int headerLength = 0;
 
         private long seqNum;
         private String msgType;
@@ -52,6 +52,11 @@ public interface FixMessage {
         @Override
         public String getMsgType() {
             return this.msgType;
+        }
+
+        @Override
+        public void setMsgType(MessageType msgType) {
+            this.msgType = msgType.getProtocolValue();
         }
 
         @Override
@@ -101,6 +106,7 @@ public interface FixMessage {
             this.targetCompId = null;
             this.seqNum = 0;
             this.msgType = null;
+            this.headerLength = 0;
         }
 
         @Override

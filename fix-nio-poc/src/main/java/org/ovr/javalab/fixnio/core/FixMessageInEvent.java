@@ -1,6 +1,7 @@
-package org.ovr.javalab.fixnio.event;
+package org.ovr.javalab.fixnio.core;
 
 import org.ovr.javalab.fixmsg.FixMessage;
+import org.ovr.javalab.fixmsg.util.FixMessageUtil;
 import org.ovr.javalab.fixnio.connection.FixConnectionContext;
 
 public class FixMessageInEvent {
@@ -24,10 +25,14 @@ public class FixMessageInEvent {
         this.fixMessage.clear();
     }
 
+    public boolean isAdminEvent() {
+        return FixMessageUtil.isAdminMsg(this.fixMessage.getMsgType());
+    }
+
     @Override
     public String toString() {
         return "FixMessageInEvent{" +
-                ", fixMessage=" + fixMessage +
+                "fixMessage=" + fixMessage +
                 ", fixConnectionContext=" + fixConnectionContext +
                 '}';
     }
