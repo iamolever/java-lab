@@ -64,4 +64,15 @@ public abstract class ByteUtil {
         } while ((value /= 10) > 0);
         return length;
     }
+
+    public static int checkSum(final Bytes buffer, final long startPosition) {
+        long sum = 0;
+        final long origReadPosition = buffer.readPosition();
+        buffer.readPosition(startPosition);
+        while (buffer.readRemaining() > 0) {
+            sum += buffer.readByte();
+        }
+        buffer.readPosition(origReadPosition);
+        return (int) (sum % 256);
+    }
 }

@@ -35,11 +35,13 @@ public class ByteUtilTest {
     }
 
     @Test
-    public void testMoveInBytes() {
-        final Bytes buffer = Bytes.elasticByteBuffer(5).write("int=|");
-        //buffer.ensureCapacity(buffer.capacity() + 3);
-        buffer.writeSkip(2);
-        buffer.move(0, 2, 5);
-        System.out.println(buffer);
-        //Assertions.assertEquals("int=   |", buffer.toString());
-    }}
+    public void testCheckSumInBytes() {
+        final String str = "abc123";
+        int sum = 0;
+        for (int i = 0; i < str.length(); i++) {
+            sum += str.charAt(i);
+        }
+        final int chksum = sum % 256;
+        Assertions.assertEquals(chksum, ByteUtil.checkSum(Bytes.from(str), 0));
+    }
+}
