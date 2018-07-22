@@ -20,6 +20,7 @@
         <openhft.lang.version>6.8.2</openhft.lang.version>
         <openhft.core.version>1.16.12</openhft.core.version>
         <openhft.bytes.version>1.16.18</openhft.bytes.version>
+        <jackson.version>2.9.6</jackson.version>
     </properties>
 
     <dependencies>

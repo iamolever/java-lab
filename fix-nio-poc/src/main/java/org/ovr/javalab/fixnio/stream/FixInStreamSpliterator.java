@@ -6,7 +6,7 @@ import org.ovr.javalab.fixmsg.util.FixMessageUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.ovr.javalab.fixmsg.util.FixMessageUtil.CHKSUM_FIELS_LEN;
+import static org.ovr.javalab.fixmsg.util.FixMessageUtil.CHKSUM_FILES_LEN;
 
 public class FixInStreamSpliterator implements FixInputStreamHandler {
     private final Logger logger = LoggerFactory.getLogger(FixInStreamSpliterator.class);
@@ -57,7 +57,7 @@ public class FixInStreamSpliterator implements FixInputStreamHandler {
             } else {
                 final long chkSumIdx = buffer.indexOf(fixChkSumPattern);
                 if (chkSumIdx > 0) {
-                    final long endOfMsgIdx = chkSumIdx + CHKSUM_FIELS_LEN;
+                    final long endOfMsgIdx = chkSumIdx + CHKSUM_FILES_LEN;
                     onReadFixMessage(endOfMsgIdx);
                     buffer.clear();
                 } else {

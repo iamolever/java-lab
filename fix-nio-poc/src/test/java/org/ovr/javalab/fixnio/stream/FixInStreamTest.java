@@ -137,7 +137,7 @@ public class FixInStreamTest {
         inBuffer.write(message1);
         fixInStream.onRead();
 
-        final Bytes outBuffer = Bytes.elasticByteBuffer(256);
+        final Bytes outBuffer = Bytes.elasticByteBuffer(10);
         FixMessageEncoder.stdEncoder(FixVersion.FIX44).encodeMessage(outBuffer, fixMessage);
         System.out.println(outBuffer);
     }

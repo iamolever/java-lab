@@ -36,4 +36,32 @@ public abstract class ByteUtil {
         }
         return value;
     }
+
+    public static int digitsInNumber(long value) {
+        int length = 1;
+        long valueCopy = value;
+        while ((valueCopy /= 10) > 0) {
+            length++;
+        }
+        return length;
+    }
+
+    public static void writePositiveNum(final Bytes buffer, long value, long length) {
+        long offset = buffer.writePosition() + length;
+        do {
+            final byte digit = (byte) ((value % 10) + '0');
+            buffer.writeByte(--offset, digit);
+        } while ((value /= 10) > 0);
+    }
+
+    public static int appendPositiveNum(final Bytes buffer, long value) {
+        int length = digitsInNumber(value);
+        long offset = buffer.writePosition() + length;
+        buffer.writeSkip(length);
+        do {
+            final byte digit = (byte) ((value % 10) + '0');
+            buffer.writeByte(--offset, digit);
+        } while ((value /= 10) > 0);
+        return length;
+    }
 }
