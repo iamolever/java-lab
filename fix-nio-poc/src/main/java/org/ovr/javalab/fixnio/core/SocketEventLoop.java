@@ -1,6 +1,7 @@
 package org.ovr.javalab.fixnio.core;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.core.Maths;
 import org.ovr.javalab.fixnio.connection.FixConnectionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -101,8 +102,19 @@ public class SocketEventLoop implements Closeable, Runnable {
 
     private void handleWritableEvent(final SelectionKey key) throws IOException {
         final FixConnectionContext context = (FixConnectionContext) key.attachment();
-        //final SocketChannel client = (SocketChannel) key.channel();
         this.socketWriteHandler.accept(context);
+        final Bytes writeBuffer = context.getWriteBuffer();
+        final ByteBuffer outBB = context.getOutByteBuffer();
+        final SocketChannel client = (SocketChannel) key.channel();
+        context.prepareOutgoingBuffer();
+        if (context.hasDataToWrite(outBB)) {
+            outBB.limit(Maths.toInt32(writeBuffer.writePosition()));
+            final int wrote = client.write(outBB);
+            if (wrote > 0) {
+                outBB.compact().flip();
+                context.getWriteBuffer().writePosition(outBB.limit());
+            }
+        }
     }
 
     private void handleAcceptableEvent(final SelectionKey key) throws IOException {

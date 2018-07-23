@@ -125,7 +125,7 @@ public class FixEngine {
             bytes.write(FixField.HeartBtInt.asString());
             FixMessageEncoder.completeTag(bytes);
             bytes.write("30");
-            FixMessageEncoder.completeField(bytes);
+            //FixMessageEncoder.completeField(bytes);
             queue.publish();
         }
     }

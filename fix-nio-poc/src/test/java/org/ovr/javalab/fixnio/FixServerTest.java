@@ -80,7 +80,6 @@ public class FixServerTest {
         };
         final Consumer<FixMessageInEvent> messageHandler = (event) -> {
             logger.debug("FIX incoming event: {}", event);
-            msgLeftToReceive.countDown();
         };
         fixServer.handleSocketConnectionWith(connectionHandler);
         fixServer.handleSocketReadEventWith(readHandler);
@@ -93,7 +92,11 @@ public class FixServerTest {
         inHandler.run();
 
         final FixClient client = FixClientFactory.createFixClient(host, port);
-        client.subscribeToAllMessages(fixMessage -> System.out.println("Received fix message " + fixMessage.toFixString()));
+        client.subscribeToAllMessages(
+                fixMessage -> {
+                    System.out.println("NANOFIX. Received fix message " + fixMessage.toFixString());
+                    msgLeftToReceive.countDown();
+                });
 
         client.registerTransportObserver(new ConnectionObserver() {
             @Override
