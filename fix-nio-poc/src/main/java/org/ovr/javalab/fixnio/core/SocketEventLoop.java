@@ -99,6 +99,19 @@ public class SocketEventLoop implements Closeable, Runnable {
         }
     }
 
+    private void clearOrCompactInBuffer(final Bytes buffer, final ByteBuffer inBB) {
+        if (buffer.readRemaining() == 0) {
+            inBB.clear();
+        } else if (buffer.readPosition() > 0) {
+            // if it read some data compact();
+            inBB.position((int) buffer.readPosition());
+            inBB.limit((int) buffer.readLimit());
+            inBB.compact();
+            buffer.readPosition(0);
+            buffer.readLimit(inBB.remaining());
+        }
+    }
+
     private void handleReadableEvent(final SelectionKey key) throws IOException {
         final FixConnectionContext context = (FixConnectionContext) key.attachment();
         final ByteBuffer inBB = context.getInByteBuffer();
@@ -111,6 +124,7 @@ public class SocketEventLoop implements Closeable, Runnable {
                 this.socketReadHandler.accept(context);
             }
             context.getInStreamHandler().onRead();
+            clearOrCompactInBuffer(buffer, inBB);
         }
     }
 

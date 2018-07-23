@@ -61,7 +61,7 @@ public class FixInStreamSpliterator implements FixInputStreamHandler {
                     onReadFixMessage(endOfMsgIdx);
                     buffer.clear();
                 } else {
-                    buffer.compact();
+                    //buffer.compact();
                     break;
                 }
             }

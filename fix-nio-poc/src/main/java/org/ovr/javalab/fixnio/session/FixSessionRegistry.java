@@ -1,5 +1,6 @@
 package org.ovr.javalab.fixnio.session;
 
+import org.ovr.javalab.fixnio.connection.FixConnectionContext;
 import org.ovr.javalab.fixnio.core.FixMessageInEvent;
 
 public interface FixSessionRegistry {
@@ -8,4 +9,7 @@ public interface FixSessionRegistry {
     }
 
     void handleLogon(final FixMessageInEvent logonMessage);
+
+    FixConnectionContext findBySenderCompId(final String senderCompId);
+    FixConnectionContext findByTargetCompId(final String targetCompId);
 }

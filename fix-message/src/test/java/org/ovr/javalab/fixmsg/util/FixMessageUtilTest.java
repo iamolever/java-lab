@@ -30,6 +30,12 @@ public class FixMessageUtilTest {
         Assertions.assertEquals(TEST_COMP_ID, internCompId);
     }
 
+    @Test
+    public void isAdminMessage() {
+        Assertions.assertTrue(FixMessageUtil.isAdminMsg('A'));
+        Assertions.assertFalse(FixMessageUtil.isAdminMsg('B'));
+    }
+
     @Benchmark
     @BenchmarkMode(Mode.Throughput)
     @Fork(value = 1)

@@ -42,16 +42,16 @@ public class FixServerTest {
         fixServer.shutdown();
     }
 
-    static com.lmax.nanofix.outgoing.FixMessage buildLogon(final int i) {
+    static com.lmax.nanofix.outgoing.FixMessage buildLogon(final String senderId, final String targetId, final String userId) {
         return new FixMessageBuilder()
                 .messageType(MsgType.LOGIN)
-                .senderCompID("sender" + i)
-                .targetCompID("target" + i)
+                .senderCompID(senderId)
+                .targetCompID(targetId)
                 .msgSeqNum(1)
                 .sendingTime(DateTime.now())
                 .encryptMethod(EncryptMethod.NONE)
                 .heartBtInt(30)
-                .username("user" + 1)
+                .username(userId)
                 .build();
     }
 
@@ -118,7 +118,7 @@ public class FixServerTest {
 
         assertTrue(client.isConnected());
 
-        client.send(buildLogon(1));
+        client.send(buildLogon("sender", "target", "user"));
         msgLeftToReceive.await(1000, TimeUnit.MILLISECONDS);
         assertEquals(0, msgLeftToReceive.getCount());
     }

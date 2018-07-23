@@ -51,9 +51,9 @@ public class FixMessageInHandler implements Runnable, Closeable {
 
     private void handle(final FixMessageInEvent event, final long sequence, final boolean endOfBatch) {
         this.fixEventInHandler.onFixEvent(event);
-        //if (event.isAdminEvent()) {
+        if (!event.isAdminEvent()) {
             messageInEventConsumer.accept(event);
-        //}
+        }
         event.clear();
     }
 
