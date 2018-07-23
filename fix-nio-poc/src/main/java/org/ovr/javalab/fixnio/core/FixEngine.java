@@ -18,7 +18,7 @@ import java.util.function.Consumer;
 public class FixEngine {
     private final static int DEF_OUT_QUEUE_CAPACITY = 1000;
 
-    private final String host;
+    private String networkInterfaceName;
     private final int port;
     private FixSessionRegistry sessionRegistry = FixSessionRegistry.defaultInstance();
 
@@ -32,14 +32,20 @@ public class FixEngine {
     private Consumer<FixMessageInEvent> newFixSessionHandler;
     private FixSessionStateConsumer fixSessionStateHandler;
 
-    public FixEngine(final String host, final int port) throws IOException {
-        this.host = host;
+
+    public FixEngine(final int port) throws IOException {
+        this.port = port;
+        initSocketLoopThread();
+    }
+
+    public FixEngine(final String networkInterfaceName, final int port) throws IOException {
+        this.networkInterfaceName = networkInterfaceName;
         this.port = port;
         initSocketLoopThread();
     }
 
     private void initSocketLoopThread() throws IOException {
-        this.socketEventLoop = new SocketEventLoop(host, port);
+        this.socketEventLoop = new SocketEventLoop(networkInterfaceName, port);
         this.ioThread = Executors.defaultThreadFactory().newThread(socketEventLoop);
     }
 

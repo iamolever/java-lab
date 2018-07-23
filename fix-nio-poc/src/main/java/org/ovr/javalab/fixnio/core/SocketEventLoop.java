@@ -8,13 +8,17 @@ import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.Enumeration;
 import java.util.Iterator;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -23,7 +27,7 @@ public class SocketEventLoop implements Closeable, Runnable {
 
     private final static boolean DEFAULT_TCP_NODELAY = true;
 
-    private final String host;
+    private final String networkInterfaceName;
     private final int port;
     private final Selector selector;
     private final ServerSocketChannel serverSocket;
@@ -35,8 +39,8 @@ public class SocketEventLoop implements Closeable, Runnable {
     private volatile boolean stopFlag = false;
     private boolean tcpNoDelay = DEFAULT_TCP_NODELAY;
 
-    public SocketEventLoop(final String host, final int port) throws IOException {
-        this.host = host;
+    public SocketEventLoop(final String networkInterfaceName, final int port) throws IOException {
+        this.networkInterfaceName = networkInterfaceName;
         this.port = port;
         selector = Selector.open();
         serverSocket = ServerSocketChannel.open();
@@ -44,7 +48,15 @@ public class SocketEventLoop implements Closeable, Runnable {
     }
 
     private void init() throws IOException {
-        serverSocket.bind(new InetSocketAddress(host, port));
+        InetSocketAddress socketAddress;
+        if (Optional.ofNullable(this.networkInterfaceName).isPresent()) {
+            final NetworkInterface nif = NetworkInterface.getByName(this.networkInterfaceName);
+            Enumeration<InetAddress> nifAddresses = nif.getInetAddresses();
+            socketAddress = new InetSocketAddress(nifAddresses.nextElement(), port);
+        } else {
+            socketAddress = new InetSocketAddress(port);
+        }
+        serverSocket.bind(socketAddress);
         serverSocket.configureBlocking(false);
         serverSocket.register(selector, SelectionKey.OP_ACCEPT);
     }
@@ -95,14 +107,18 @@ public class SocketEventLoop implements Closeable, Runnable {
         if (read > 0) {
             final Bytes buffer = context.getReadBuffer();
             buffer.readLimit(inBB.position());
-            this.socketReadHandler.accept(context);
+            if (socketReadHandler != null) {
+                this.socketReadHandler.accept(context);
+            }
             context.getInStreamHandler().onRead();
         }
     }
 
     private void handleWritableEvent(final SelectionKey key) throws IOException {
         final FixConnectionContext context = (FixConnectionContext) key.attachment();
-        this.socketWriteHandler.accept(context);
+        if (socketWriteHandler != null) {
+            this.socketWriteHandler.accept(context);
+        }
         final Bytes writeBuffer = context.getWriteBuffer();
         final ByteBuffer outBB = context.getOutByteBuffer();
         final SocketChannel client = (SocketChannel) key.channel();
