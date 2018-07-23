@@ -44,6 +44,10 @@ public class FixEngine {
         initSocketLoopThread();
     }
 
+    public FixSessionRegistry getSessionRegistry() {
+        return sessionRegistry;
+    }
+
     private void initSocketLoopThread() throws IOException {
         this.socketEventLoop = new SocketEventLoop(networkInterfaceName, port);
         this.ioThread = Executors.defaultThreadFactory().newThread(socketEventLoop);
